@@ -8,7 +8,7 @@
         38: "UP_ARROW",
         39: "RIGHT_ARROW",
         40: "DOWN_ARROW"
-    };    
+    };
     var LEFT_MOUSE_BTN = 0;
 
     /** isNum: (anything) => Boolean
@@ -22,25 +22,25 @@
     function isNum(num){
         return !isNaN(parseFloat(num));
     }
-    
+
     /** hasNumAttr: (DOM, string) => Boolean
     *
     * utility function returning true if the given element has a number as the
     * value of the specified attribute
     **/
     function hasNumAttr(elem, attrName){
-        return (elem.hasAttribute(attrName) && 
+        return (elem.hasAttribute(attrName) &&
                 isNum(elem.getAttribute(attrName)));
     }
 
     /** roundToStep: (Number, Number, Number, Function) => Number
     *
-    * given a value to round and the size of each step, round the given value to 
+    * given a value to round and the size of each step, round the given value to
     * the closest multiple of the given step, accounting for the offset
-    * provided for the given range (ie: so that the steps are in terms of 
-    * distance from the range minimum. So, a range of min = 3 and step = 5 
+    * provided for the given range (ie: so that the steps are in terms of
+    * distance from the range minimum. So, a range of min = 3 and step = 5
     * should round to to 3, 8, 13, etc instead of 5, 10, 15, etc.)
-    * 
+    *
     * params:
     *   rawRangeVal             the raw value that we want to round
     *   step                    the spacing between valid steps
@@ -53,7 +53,7 @@
     function roundToStep(rawRangeVal, step, rangeMin, roundFn){
         roundFn = (roundFn) ? roundFn : Math.round;
         rangeMin = (isNum(rangeMin)) ? rangeMin : 0;
-        
+
         if(!isNum(rawRangeVal)){
             throw "invalid value " + rawRangeVal;
         }
@@ -62,11 +62,11 @@
         }
         return roundFn((rawRangeVal - rangeMin) / step) * step + rangeMin;
     }
-    
-    
+
+
     /** constrainToSteppedRange: (Number, Number, Number, Number) => Number
     *
-    * given a value and range parameters, constrains the 
+    * given a value and range parameters, constrains the
     * value to the given range by following these rules:
     *   - if the value is too small for the range, return the range minimum
     *   - if the value is too big for the range, return the largest stepped
@@ -85,19 +85,19 @@
             return value;
         }
     }
-    
-    
+
+
     /** getDefaultVal: (Number, Number, Number) => Number
     *
-    * returns the multiple of the given step that is closest to the median of 
+    * returns the multiple of the given step that is closest to the median of
     * given range, while still remaining in the range
     **/
     function getDefaultVal(min, max, step){
         var roundedVal = roundToStep(((max - min) / 2) + min, step, min);
         return constrainToSteppedRange(roundedVal, min, max, step);
     }
-    
-    
+
+
     /** _rawValToFraction: (DOM, Number) => Number
     *
     * returns a fractional value (ie: between 0.0 and 1.0) to which the given
@@ -109,8 +109,8 @@
         var max = slider.max;
         return (value - min) / (max - min);
     }
-    
-    
+
+
     /** _fractionToRawVal: (DOM, Number) => Number
     *
     * takes a fractional value (ie: between 0.0 and 1.0) and returns the raw
@@ -121,8 +121,8 @@
         var max = slider.max;
         return ((max - min) * fraction) + min;
     }
-    
-    
+
+
     /** _fractionToCorrectedVal: (DOM, Number) => Number
     *
     * returns the value at the given percentage along the slider, corrected
@@ -131,20 +131,20 @@
     **/
     function _fractionToCorrectedVal(slider, sliderFraction){
         sliderFraction = Math.min(Math.max(0.0, sliderFraction), 1.0);
-        
+
         var rawVal = _fractionToRawVal(slider, sliderFraction);
-        
+
         // temporarily translate the range to start at zero for the step
         // rounding, then add back in the minimum so that the step is always in
         // relation to the start of the range, instead of starting partially
         // within the range
         var roundedVal = roundToStep(rawVal, slider.step, slider.min);
-        
-        return constrainToSteppedRange(roundedVal, slider.min, slider.max, 
+
+        return constrainToSteppedRange(roundedVal, slider.min, slider.max,
                                        slider.step);
     }
-    
-    
+
+
     /** _positionThumb: (DOM, Number)
     *
     * given a value on the slider, position the polyfill thumb graphic element
@@ -152,29 +152,36 @@
     **/
     function _positionThumb(slider, value){
         var thumb = slider.xtag.polyFillSliderThumb;
-        
+
         if(!thumb){
             return;
         }
         var sliderRect = slider.getBoundingClientRect();
         var thumbRect = thumb.getBoundingClientRect();
         var fraction = _rawValToFraction(slider, value);
-        
+        var vertical = slider.vertical;
+
+
+        // if the slider is vertical, we need to use height rather than width
+        var sliderWidth = sliderRect[vertical ? 'height' : 'width'];
+        var thumbWidth = thumbRect[vertical ? 'height' : 'width'];
+
         // note that range inputs don't allow the thumb to spill past the bar
         // boundaries, so we actually have a little less width to work with
         // than the actual width of the slider when determining thumb position
-        var availableWidth = Math.max(sliderRect.width - thumbRect.width, 0);
-        
+        var availableWidth = Math.max(sliderWidth - thumbWidth, 0);
+
         var newThumbX = (availableWidth * fraction);
-        
+
         // translate back into percentage in relation to the full width, since
         // the element isn't actually constrained by our overflow constraints
-        var finalPercentage = newThumbX / sliderRect.width;
-        
-        thumb.style.left = finalPercentage*100 + "%";
+        var finalPercentage = newThumbX / sliderWidth;
+
+        thumb.style[vertical ? 'top' : 'left'] = 0;
+        thumb.style[vertical ? 'left' : 'top'] = finalPercentage*100 + "%";
     }
-    
-    
+
+
     /** _redraw: DOM
     *
     * when called, refreshes the graphics of the polyfill slider
@@ -183,7 +190,7 @@
         _positionThumb(slider, slider.value);
     }
 
-    
+
     /** _onMouseInput: (DOM, Number, Number)
     *
     * given the slider and absolute coordinates, reposition the polyfill
@@ -201,47 +208,52 @@
         var inputEl = slider.xtag.rangeInputEl;
         var inputOffsets = inputEl.getBoundingClientRect();
         var inputClickX = pageX - inputOffsets.left;
-        
+        var divideby = inputOffsets.width;
+        if(slider.vertical){
+            divideby = inputOffsets.height;
+            inputClickX = pageY - inputOffsets.top;
+        }
+
         var oldValue = slider.value;
-        var newValue = _fractionToCorrectedVal(slider, 
-                                              inputClickX / inputOffsets.width);
+        var newValue = _fractionToCorrectedVal(slider,
+                                              inputClickX / divideby);
         slider.value = newValue;
-        
+
         // fire events
         xtag.fireEvent(slider, "input");
         _redraw(slider);
     }
-    
-    
+
+
     /** _onDragStart: (DOM, Number, Number)
     *
     * called when the user begins dragging the the polyfill slider,
-    * positions the slider to match the given aboslute mouse coordinates and 
+    * positions the slider to match the given aboslute mouse coordinates and
     * sets up callbacks functions for handling the rest of the drag
     **/
     function _onDragStart(slider, pageX, pageY){
         slider.xtag.dragInitVal = slider.value;
         _onMouseInput(slider, pageX, pageY);
-        
+
         var callbacks = slider.xtag.callbackFns;
         // for minification
         var _addBodyListener = function(event, listener){
             document.body.addEventListener(event, listener);
         };
-        
+
         _addBodyListener("mousemove", callbacks.onMouseDragMove);
         _addBodyListener("touchmove", callbacks.onTouchDragMove);
         _addBodyListener("mouseup", callbacks.onDragEnd);
         _addBodyListener("touchend", callbacks.onDragEnd);
-        
+
         var thumb = slider.xtag.polyFillSliderThumb;
         // set flag to allow CSS stylings to apply
         if(thumb){
             thumb.setAttribute("active", true);
         }
     }
-    
-    
+
+
     /** _onDragMove: (DOM, Number, Number)
     *
     * handles how to update the slider when the cursor is moved during a slider
@@ -250,8 +262,8 @@
     function _onDragMove(slider, pageX, pageY){
         _onMouseInput(slider, pageX, pageY);
     }
-    
-    
+
+
     /** _makeCallbackFns: (DOM) => datamap
     *
     * given a x-slider element, returns a dictionary of callback functions
@@ -269,29 +281,29 @@
                 if(e.button !== LEFT_MOUSE_BTN){
                     return;
                 }
-            
+
                 _onDragStart(slider, e.pageX, e.pageY);
-                
+
                 e.preventDefault(); // disable selecting elements while dragging
             },
-            
+
             // function to call on a touchstart
             "onTouchDragStart": function(e){
                 var touches = e.targetTouches;
                 if(touches.length !== 1){
                     return;
                 }
-                
+
                 _onDragStart(slider, touches[0].pageX, touches[0].pageY);
                 e.preventDefault();
             },
-            
+
             // function to call on a mousemove during a drag
             "onMouseDragMove": function(e){
                 _onDragMove(slider, e.pageX, e.pageY);
                 e.preventDefault();
             },
-            
+
             // function to call on a touchmove during a drag
             "onTouchDragMove": function(e){
                  var touches = e.targetTouches;
@@ -301,7 +313,7 @@
                  _onDragMove(slider, touches[0].pageX, touches[0].pageY);
                  e.preventDefault();
             },
-            
+
             // function to call on the end of a drag (whether mouse or touch)
             // removes listeners for handling drag
             "onDragEnd": function(e){
@@ -314,7 +326,7 @@
                 _removeBodyListener("touchmove", callbacks.onTouchDragMove);
                 _removeBodyListener("mouseup", callbacks.onDragEnd);
                 _removeBodyListener("touchend", callbacks.onDragEnd);
-                
+
                 var thumb = slider.xtag.polyFillSliderThumb;
                 if(thumb){
                     thumb.removeAttribute("active");
@@ -327,7 +339,7 @@
 
                 e.preventDefault();
             },
-            
+
             // function to call when the polyfill slider receives key inputs,
             // allowing keyboard controls
             "onKeyDown": function(e){
@@ -339,7 +351,7 @@
                     var step = this.step;
                     var rangeSize = Math.max(0, max - min);
                     var largeStep = Math.max(rangeSize / 10, step);
-                    
+
                     switch(KEYCODES[keyCode]){
                         case "LEFT_ARROW":
                         case "DOWN_ARROW":
@@ -364,17 +376,17 @@
                         default:
                             break;
                     }
-                    
+
                     if(this.value !== oldVal){
                         xtag.fireEvent(this, "change");
                     }
-                    
+
                     e.preventDefault();
                 }
             }
         };
     }
-    
+
     xtag.register("x-slider", {
         lifecycle: {
             created: function(){
@@ -385,43 +397,43 @@
                 var input = document.createElement("input");
                 xtag.addClass(input, "input");
                 input.setAttribute("type", "range");
-                
+
                 // constrain initial attribute values
-                var initMax = (hasNumAttr(self, "max")) ? 
+                var initMax = (hasNumAttr(self, "max")) ?
                                 +self.getAttribute("max") : 100;
-                                
-                var initMin = (hasNumAttr(self, "min")) ? 
+
+                var initMin = (hasNumAttr(self, "min")) ?
                                 +self.getAttribute("min") : 0;
-                                
-                var initStep = (hasNumAttr(self, "step")) ? 
+
+                var initStep = (hasNumAttr(self, "step")) ?
                                 +self.getAttribute("step") : 1;
                 // steps must also be strictly positive
                 initStep = (initStep > 0) ? initStep : 1;
-                
-                var initVal = (hasNumAttr(self, "value")) ? 
-                                +self.getAttribute("value") : 
+
+                var initVal = (hasNumAttr(self, "value")) ?
+                                +self.getAttribute("value") :
                                 getDefaultVal(initMin, initMax, initStep);
-                
+
                 // because the x-slider accessors read from the input element's
                 // attributes, make sure to actually set them
                 input.setAttribute("max", initMax);
                 input.setAttribute("min", initMin);
                 input.setAttribute("step", initStep);
                 input.setAttribute("value", initVal);
-                
+
                 // finally, actually add the the input to the x-slider
                 self.xtag.rangeInputEl = input;
                 self.appendChild(self.xtag.rangeInputEl);
-                
+
                 self.xtag.polyFillSliderThumb = null;
-                
+
                 if(input.type !== "range" || self.hasAttribute("polyfill")){
                     self.setAttribute("polyfill", true);
                 }
                 else{
                     self.removeAttribute("polyfill");
                 }
-                
+
                 _redraw(self);
             },
             attributeChanged: function(){
@@ -437,17 +449,17 @@
                 e.stopPropagation();
                 xtag.fireEvent(e.currentTarget, "input");
             },
-            // note that focus/blur events don't bubble by default, so 
+            // note that focus/blur events don't bubble by default, so
             // in order for users to attach listeners to the x-slider focus
             // instead of the input's, fake one level of bubbling
             'focus:delegate(input[type=range])': function(e){
                 var slider = e.currentTarget;
-                
+
                 xtag.fireEvent(slider, "focus", {}, {bubbles: false});
             },
             'blur:delegate(input[type=range])': function(e){
                 var slider = e.currentTarget;
-                
+
                 xtag.fireEvent(slider, "blur", {}, {bubbles: false});
             }
         },
@@ -457,31 +469,31 @@
                 /** when polyfill is set, enable the polyfill slider graphical
                  *  elements and event handlers
                  *
-                 * when unset, remove polyfill elements and revert to original 
+                 * when unset, remove polyfill elements and revert to original
                  * settings
                  **/
                 set: function(isPolyfill){
                     var callbackFns = this.xtag.callbackFns;
-                    
-                    // create polyfill thumb element if missing; 
+
+                    // create polyfill thumb element if missing;
                     // otherwise CSS takes care of unhiding it
                     if(isPolyfill){
                         // make the slider focusable, not the underlying input
                         this.setAttribute("tabindex", 0);
                         this.xtag.rangeInputEl.setAttribute("tabindex", -1);
                         this.xtag.rangeInputEl.setAttribute("readonly", true);
-                        
+
                         if(!this.xtag.polyFillSliderThumb){
                             var sliderThumb = document.createElement("span");
                             xtag.addClass(sliderThumb, "slider-thumb");
-                            
+
                             this.xtag.polyFillSliderThumb = sliderThumb;
                             this.appendChild(sliderThumb);
                         }
                         _redraw(this);
-                        this.addEventListener("mousedown", 
+                        this.addEventListener("mousedown",
                                               callbackFns.onMouseDragStart);
-                        this.addEventListener("touchstart", 
+                        this.addEventListener("touchstart",
                                               callbackFns.onTouchDragStart);
                         this.addEventListener("keydown", callbackFns.onKeyDown);
                     }
@@ -490,13 +502,25 @@
                         this.removeAttribute("tabindex");
                         this.xtag.rangeInputEl.removeAttribute("tabindex");
                         this.xtag.rangeInputEl.removeAttribute("readonly");
-                        this.removeEventListener("mousedown", 
+                        this.removeEventListener("mousedown",
                                                  callbackFns.onMouseDragStart);
-                        this.removeEventListener("touchstart", 
+                        this.removeEventListener("touchstart",
                                                  callbackFns.onTouchDragStart);
-                        this.removeEventListener("keydown", 
+                        this.removeEventListener("keydown",
                                                  callbackFns.onKeyDown);
                     }
+                }
+            },
+            "vertical": {
+                attribute: {boolean: true},
+                /** when vertical is set, rotate the polyfill slider graphical
+                 *  elements 90 degrees
+                 *
+                 * when unset, remove vertical elements and revert to original
+                 * settings
+                 **/
+                set: function(isVertical){
+                    _redraw(this);
                 }
             },
             // simple interface with the actual input element
@@ -549,26 +573,26 @@
                 get: function(){
                     return +this.xtag.rangeInputEl.value;
                 },
-                // rounds the input value to the closest constrained 
+                // rounds the input value to the closest constrained
                 // valid step value
                 set: function(rawVal){
                     if(!isNum(rawVal)){
                         rawVal = getDefaultVal(this.min, this.max, this.step);
                     }
-                    
+
                     rawVal = +rawVal;
                     var min = this.min;
                     var max = this.max;
                     var step = this.step;
-                
+
                     var roundedVal = roundToStep(rawVal, step, min);
-                    var finalVal = constrainToSteppedRange(roundedVal, min, 
+                    var finalVal = constrainToSteppedRange(roundedVal, min,
                                                            max, step);
                     this.xtag.rangeInputEl.value = finalVal;
                     _redraw(this);
                 }
             },
-            
+
             // getter to retrieve the actual input DOM element we are wrapping
             "inputElem": {
                 get: function(){
