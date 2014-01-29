@@ -175,8 +175,8 @@
         // the element isn't actually constrained by our overflow constraints
         var finalPercentage = newThumbX / sliderWidth;
 
-        thumb.style[vertical ? 'top' : 'left'] = 0;
-        thumb.style[vertical ? 'left' : 'top'] = finalPercentage*100 + "%";
+        thumb.style[vertical ? 'left' : 'top'] = 0;
+        thumb.style[vertical ? 'top' : 'left'] = finalPercentage*100 + "%";
     }
 
 
@@ -478,6 +478,13 @@
                         this.xtag.rangeInputEl.setAttribute("tabindex", -1);
                         this.xtag.rangeInputEl.setAttribute("readonly", true);
 
+                        if (!this.xtag.polyFillSliderTrack) {
+                            var sliderTrack = document.createElement("div");
+                            xtag.addClass(sliderTrack, "slider-track");
+
+                            this.xtag.polyFillSliderTrack = sliderTrack;
+                            this.appendChild(sliderTrack);
+                        }
                         if (!this.xtag.polyFillSliderThumb) {
                             var sliderThumb = document.createElement("span");
                             xtag.addClass(sliderThumb, "slider-thumb");
