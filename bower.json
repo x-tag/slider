@@ -1,7 +1,7 @@
 {
   "name": "x-tag-slider",
   "description": "Polyfill on top of input type='range', providing a consistent UI regardless of whether type='range' is supported or not.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "keywords": [
     "web-components",
     "button",
