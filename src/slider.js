@@ -149,7 +149,7 @@
     * to be centered on the given value
     **/
     function _positionThumb (slider, value) {
-        var thumb = slider.xtag.polyFillSliderThumb;
+        var thumb = slider.xtag.sliderThumb;
 
         if (!thumb) {
             return;
@@ -158,7 +158,6 @@
         var thumbRect = thumb.getBoundingClientRect();
         var fraction = _rawValToFraction(slider, value);
         var vertical = slider.vertical;
-
 
         // if the slider is vertical, we need to use height rather than width
         var sliderWidth = sliderRect[vertical ? 'height' : 'width'];
@@ -176,7 +175,8 @@
         var finalPercentage = newThumbX / sliderWidth;
 
         thumb.style[vertical ? 'left' : 'top'] = 0;
-        thumb.style[vertical ? 'top' : 'left'] = finalPercentage*100 + "%";
+        thumb.style[vertical ? 'top' : 'left'] = finalPercentage * 100 + "%";
+        slider.xtag.sliderProgress.style[vertical ? 'height' : 'width'] = fraction * 100 + "%";
     }
 
 
@@ -205,8 +205,9 @@
     function _onMouseInput (slider, pageX, pageY) {
         var inputEl = slider.xtag.rangeInputEl;
         var inputOffsets = inputEl.getBoundingClientRect();
-        var inputClickX = pageX - inputOffsets.left;
-        var divideby = inputOffsets.width;
+        var thumbWidth = slider.xtag.sliderThumb.getBoundingClientRect().width;
+        var inputClickX = pageX - inputOffsets.left - thumbWidth / 2;
+        var divideby = inputOffsets.width - thumbWidth / 2;
         if (slider.vertical) {
             divideby = inputOffsets.height;
             inputClickX = pageY - inputOffsets.top;
@@ -242,7 +243,7 @@
         _addBodyListener("mouseup", callbacks.onDragEnd);
         _addBodyListener("touchend", callbacks.onDragEnd);
 
-        var thumb = slider.xtag.polyFillSliderThumb;
+        var thumb = slider.xtag.sliderThumb;
         // set flag to allow CSS stylings to apply
         if (thumb) {
             thumb.setAttribute("active", true);
@@ -323,7 +324,7 @@
                 _removeBodyListener("mouseup", callbacks.onDragEnd);
                 _removeBodyListener("touchend", callbacks.onDragEnd);
 
-                var thumb = slider.xtag.polyFillSliderThumb;
+                var thumb = slider.xtag.sliderThumb;
                 if (thumb) {
                     thumb.removeAttribute("active");
                 }
@@ -421,7 +422,20 @@
                 self.xtag.rangeInputEl = input;
                 self.appendChild(self.xtag.rangeInputEl);
 
-                self.xtag.polyFillSliderThumb = null;
+                var sliderTrack = document.createElement("div");
+                xtag.addClass(sliderTrack, "slider-track");
+                this.xtag.sliderTrack = sliderTrack;
+                this.appendChild(sliderTrack);
+
+                var sliderProgress = document.createElement("div");
+                xtag.addClass(sliderProgress, "slider-progress");
+                this.xtag.sliderProgress = sliderProgress;
+                sliderTrack.appendChild(sliderProgress);
+
+                var sliderThumb = document.createElement("span");
+                xtag.addClass(sliderThumb, "slider-thumb");
+                this.xtag.sliderThumb = sliderThumb;
+                this.appendChild(sliderThumb);
 
                 if (input.type !== "range" || self.hasAttribute("polyfill")) {
                     self.setAttribute("polyfill", true);
@@ -429,10 +443,27 @@
                     self.removeAttribute("polyfill");
                 }
 
-                _redraw(self);
+                this.addEventListener("mousedown",
+                                      self.xtag.callbackFns.onMouseDragStart);
+                this.addEventListener("touchstart",
+                                      self.xtag.callbackFns.onTouchDragStart);
+                this.addEventListener("keydown", self.xtag.callbackFns.onKeyDown);
+
+                self.setAttribute("value", initVal);
             },
-            attributeChanged: function () {
-                _redraw(this);
+            inserted: function() {
+                //Janky as all hell. Fix it.
+                var self = this;
+                xtag.requestFrame(function () {
+                    xtag.requestFrame(function () {
+                        _redraw(self);
+                    });
+                });
+            },
+            attributeChanged: function (property) {
+                if (property == 'min' || property == 'max' || property == 'step') {
+                    _redraw(this);
+                }
             }
         },
         events: {
@@ -470,45 +501,18 @@
                 set: function (isPolyfill) {
                     var callbackFns = this.xtag.callbackFns;
 
-                    // create polyfill thumb element if missing;
                     // otherwise CSS takes care of unhiding it
                     if (isPolyfill) {
                         // make the slider focusable, not the underlying input
                         this.setAttribute("tabindex", 0);
                         this.xtag.rangeInputEl.setAttribute("tabindex", -1);
                         this.xtag.rangeInputEl.setAttribute("readonly", true);
-
-                        if (!this.xtag.polyFillSliderTrack) {
-                            var sliderTrack = document.createElement("div");
-                            xtag.addClass(sliderTrack, "slider-track");
-
-                            this.xtag.polyFillSliderTrack = sliderTrack;
-                            this.appendChild(sliderTrack);
-                        }
-                        if (!this.xtag.polyFillSliderThumb) {
-                            var sliderThumb = document.createElement("span");
-                            xtag.addClass(sliderThumb, "slider-thumb");
-
-                            this.xtag.polyFillSliderThumb = sliderThumb;
-                            this.appendChild(sliderThumb);
-                        }
                         _redraw(this);
-                        this.addEventListener("mousedown",
-                                              callbackFns.onMouseDragStart);
-                        this.addEventListener("touchstart",
-                                              callbackFns.onTouchDragStart);
-                        this.addEventListener("keydown", callbackFns.onKeyDown);
                     } else {
                         // simply hide the polyfill element
                         this.removeAttribute("tabindex");
                         this.xtag.rangeInputEl.removeAttribute("tabindex");
                         this.xtag.rangeInputEl.removeAttribute("readonly");
-                        this.removeEventListener("mousedown",
-                                                 callbackFns.onMouseDragStart);
-                        this.removeEventListener("touchstart",
-                                                 callbackFns.onTouchDragStart);
-                        this.removeEventListener("keydown",
-                                                 callbackFns.onKeyDown);
                     }
                 }
             },
