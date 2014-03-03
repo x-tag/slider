@@ -149,34 +149,39 @@
     * to be centered on the given value
     **/
     function _positionThumb (slider, value) {
-        var thumb = slider.xtag.sliderThumb;
-
-        if (!thumb) {
-            return;
+        if (slider.xtag.thumbFrame) {
+            xtag.cancelFrame(slider.xtag.thumbFrame);
         }
-        var sliderRect = slider.getBoundingClientRect();
-        var thumbRect = thumb.getBoundingClientRect();
-        var fraction = _rawValToFraction(slider, value);
-        var vertical = slider.vertical;
+        slider.xtag.thumbFrame = xtag.requestFrame(function () {
+            var thumb = slider.xtag.sliderThumb;
 
-        // if the slider is vertical, we need to use height rather than width
-        var sliderWidth = sliderRect[vertical ? 'height' : 'width'];
-        var thumbWidth = thumbRect[vertical ? 'height' : 'width'];
+            if (!thumb) {
+                return;
+            }
+            var sliderRect = slider.getBoundingClientRect();
+            var thumbRect = thumb.getBoundingClientRect();
+            var fraction = _rawValToFraction(slider, value);
+            var vertical = slider.vertical;
 
-        // note that range inputs don't allow the thumb to spill past the bar
-        // boundaries, so we actually have a little less width to work with
-        // than the actual width of the slider when determining thumb position
-        var availableWidth = Math.max(sliderWidth - thumbWidth, 0);
+            // if the slider is vertical, we need to use height rather than width
+            var sliderWidth = sliderRect[vertical ? 'height' : 'width'];
+            var thumbWidth = thumbRect[vertical ? 'height' : 'width'];
 
-        var newThumbX = (availableWidth * fraction);
+            // note that range inputs don't allow the thumb to spill past the bar
+            // boundaries, so we actually have a little less width to work with
+            // than the actual width of the slider when determining thumb position
+            var availableWidth = Math.max(sliderWidth - thumbWidth, 0);
 
-        // translate back into percentage in relation to the full width, since
-        // the element isn't actually constrained by our overflow constraints
-        var finalPercentage = newThumbX / sliderWidth;
+            var newThumbX = (availableWidth * fraction);
 
-        thumb.style[vertical ? 'left' : 'top'] = 0;
-        thumb.style[vertical ? 'top' : 'left'] = finalPercentage * 100 + "%";
-        slider.xtag.sliderProgress.style[vertical ? 'height' : 'width'] = fraction * 100 + "%";
+            // translate back into percentage in relation to the full width, since
+            // the element isn't actually constrained by our overflow constraints
+            var finalPercentage = newThumbX / sliderWidth;
+
+            thumb.style[vertical ? 'left' : 'top'] = 0;
+            thumb.style[vertical ? 'top' : 'left'] = finalPercentage * 100 + "%";
+            slider.xtag.sliderProgress.style[vertical ? 'height' : 'width'] = fraction * 100 + "%";
+        });
     }
 
 
@@ -499,8 +504,6 @@
                  * settings
                  **/
                 set: function (isPolyfill) {
-                    var callbackFns = this.xtag.callbackFns;
-
                     // otherwise CSS takes care of unhiding it
                     if (isPolyfill) {
                         // make the slider focusable, not the underlying input
